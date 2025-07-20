@@ -11,6 +11,12 @@
   </table>
 </template>
 
+<style scoped>
+tbody tr:hover {
+  background-color: #f0f6ff;
+}
+</style>
+
 <script setup lang="ts">
 // Table wrapper
 </script> 
