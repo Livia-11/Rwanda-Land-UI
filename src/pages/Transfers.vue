@@ -48,7 +48,7 @@
           <th class="text-left px-4 py-2">Actions</th>
         </template>
         <tr v-for="transfer in transfers" :key="transfer.id">
-          <td class="px-4 py-2">{{ transfer.recipient_id }}</td>
+          <td class="px-4 py-2">{{ transfer.recipient_name }}</td>
           <td class="px-4 py-2">{{ transfer.parcel_id }}</td>
           <td class="px-4 py-2">
             <span v-if="transfer.status === 'Pending'" class="text-yellow-600 font-semibold">Pending</span>
@@ -82,11 +82,14 @@
         </div>
       </div>
     </BaseModal>
+    <div v-if="!backendAvailable" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+      <strong>Warning:</strong> Backend is not connected. Data is not saved to the server.
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseFileUpload from '@/components/ui/BaseFileUpload.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -94,6 +97,7 @@ import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseTable from '@/components/ui/BaseTable.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import BaseToast from '@/components/ui/BaseToast.vue'
+import { supabase } from '@/lib/supabase'
 
 // Form state
 const recipientId = ref('')
@@ -105,10 +109,13 @@ const contractFileError = ref('')
 const loading = ref(false)
 const toast = ref({ show: false, message: '' })
 
+const backendAvailable = false // Set to true when backend is ready
+
 // Transfers list (mock data for now)
 const transfers = ref([
-  { id: 1, recipient_id: 'user123', parcel_id: '12345', status: 'Pending', date: '2024-05-01' },
-  { id: 2, recipient_id: 'user456', parcel_id: '54321', status: 'Completed', date: '2024-05-02' },
+  { id: 1, recipient_name: 'user123', parcel_id: '12345', status: 'Pending', date: '2024-05-01', contract_document_url: '' },
+  { id: 2, recipient_name: 'user456', parcel_id: '54321', status: 'Completed', date: '2024-05-02', contract_document_url: '' },
+  { id: 3, recipient_name: 'user789', parcel_id: '67890', status: 'Rejected', date: '2024-05-03', contract_document_url: '' },
 ])
 
 // Modal state
@@ -127,24 +134,93 @@ function validateForm() {
   return !recipientIdError.value && !parcelIdError.value && !contractFileError.value
 }
 
-function onSubmit() {
+function showBackendWarning() {
+  toast.value = { show: true, message: 'Backend is not connected. Data will not be saved to the server.' }
+  setTimeout(() => (toast.value.show = false), 2000)
+}
+
+async function uploadContractFile(file) {
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`
+  const { data, error } = await supabase.storage.from('proofs').upload(fileName, file)
+  if (error) throw error
+  const { data: publicUrlData } = supabase.storage.from('proofs').getPublicUrl(fileName)
+  return publicUrlData.publicUrl
+}
+
+async function fetchTransfers() {
+  loading.value = true
+  try {
+    const { data, error } = await supabase
+      .from('transfers')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    transfers.value = (data || []).map(t => ({
+      ...t,
+      date: t.created_at ? t.created_at.slice(0, 10) : '',
+    }))
+  } catch (err) {
+    showBackendWarning()
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  if (backendAvailable) {
+    fetchTransfers()
+  }
+})
+
+async function onSubmit() {
   if (!validateForm()) return
   loading.value = true
-  setTimeout(() => {
-    transfers.value.push({
-      id: Date.now(),
-      recipient_id: recipientId.value,
-      parcel_id: parcelId.value,
-      status: 'Pending',
-      date: new Date().toISOString().slice(0, 10),
-    })
-    loading.value = false
+  try {
+    if (!backendAvailable) {
+      showBackendWarning()
+      transfers.value.unshift({
+        id: Date.now(),
+        recipient_name: recipientId.value,
+        parcel_id: parcelId.value,
+        status: 'Pending',
+        date: new Date().toISOString().slice(0, 10),
+        contract_document_url: '',
+      })
+      recipientId.value = ''
+      parcelId.value = ''
+      contractFile.value = []
+      loading.value = false
+      return
+    }
+    // 1. Upload contract file
+    const file = contractFile.value[0]
+    let contractFileUrl = ''
+    if (file) {
+      contractFileUrl = await uploadContractFile(file)
+    }
+    // 2. Insert transfer record
+    const { error } = await supabase.from('transfers').insert([
+      {
+        recipient_name: recipientId.value,
+        parcel_id: parcelId.value,
+        contract_document_url: contractFileUrl,
+        status: 'Pending',
+      },
+    ])
+    if (error) throw error
     toast.value = { show: true, message: 'Transfer initiated successfully!' }
     setTimeout(() => (toast.value.show = false), 2000)
     recipientId.value = ''
     parcelId.value = ''
     contractFile.value = []
-  }, 1200)
+    await fetchTransfers()
+  } catch (err) {
+    toast.value = { show: true, message: 'Submission failed. Please try again.' }
+    setTimeout(() => (toast.value.show = false), 2000)
+  } finally {
+    loading.value = false
+  }
 }
 
 function openUpdateModal(transfer: any) {

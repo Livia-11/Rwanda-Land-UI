@@ -34,13 +34,13 @@
             Land Size (m²) <span class="text-red-500">*</span>
           </label>
           <BaseInput
-            v-model="landSize"
+            v-model="size"
             type="number"
             placeholder="e.g. 500"
             class="bg-blue-50 focus:ring-blue-400"
           />
           <span class="text-xs text-gray-500">Enter size in square meters.</span>
-          <div v-if="landSizeError" class="text-xs text-red-500 mt-1">{{ landSizeError }}</div>
+          <div v-if="sizeError" class="text-xs text-red-500 mt-1">{{ sizeError }}</div>
         </div>
         <div>
           <label class="block text-blue-700 font-semibold mb-1">
@@ -99,19 +99,22 @@
           <td class="px-4 py-2">{{ app.parcel_id }}</td>
           <td class="px-4 py-2">{{ app.address }}</td>
           <td class="px-4 py-2">
-            <span v-if="app.status === 'Pending'" class="text-yellow-600 font-semibold">Pending</span>
-            <span v-else-if="app.status === 'Completed'" class="text-green-600 font-semibold">Completed</span>
-            <span v-else-if="app.status === 'Rejected'" class="text-red-600 font-semibold">Rejected</span>
+            <span v-if="app.statusa === 'Pending'" class="text-yellow-600 font-semibold">Pending</span>
+            <span v-else-if="app.statusa === 'Completed'" class="text-green-600 font-semibold">Completed</span>
+            <span v-else-if="app.statusa === 'Rejected'" class="text-red-600 font-semibold">Rejected</span>
           </td>
           <td class="px-4 py-2">{{ app.date }}</td>
         </tr>
       </BaseTable>
     </BaseCard>
+    <div v-if="!backendAvailable" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+      <strong>Warning:</strong> Backend is not connected. Data is not saved to the server.
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseSelect from '@/components/ui/BaseSelect.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -122,11 +125,12 @@ import BaseTable from '@/components/ui/BaseTable.vue'
 import BaseToast from '@/components/ui/BaseToast.vue'
 
 import { useForm, useField } from 'vee-validate'
+import { supabase } from '@/lib/supabase'
 
 const initialValues = {
   parcel_id: '',
   address: '',
-  land_size: '',
+  size: '',
   ownership_type: '',
   proof_file: [], // Store as array for consistency
 }
@@ -136,7 +140,7 @@ const { handleSubmit, resetForm } = useForm({
   validationSchema: {
     parcel_id: value => typeof value === 'string' && value.trim() !== '' || 'Parcel ID is required',
     address: value => typeof value === 'string' && value.trim() !== '' || 'Address is required',
-    land_size: value => {
+    size: value => {
       const num = Number(value)
       return (!isNaN(num) && num > 0) || 'Land size is required'
     },
@@ -145,35 +149,75 @@ const { handleSubmit, resetForm } = useForm({
   },
 })
 
-const { value: parcelId, errorMessage: parcelIdError, ...parcelIdField } = useField('parcel_id')
-const { value: address, errorMessage: addressError, ...addressField } = useField('address')
-const { value: landSize, errorMessage: landSizeError, ...landSizeField } = useField('land_size')
-const { value: ownershipType, errorMessage: ownershipTypeError, ...ownershipTypeField } = useField('ownership_type')
+const { value: parcelId, errorMessage: parcelIdError } = useField('parcel_id')
+const { value: address, errorMessage: addressError } = useField('address')
+const { value: size, errorMessage: sizeError } = useField('size')
+const { value: ownershipType, errorMessage: ownershipTypeError } = useField('ownership_type')
 const { value: proofFile, errorMessage: proofFileError, setValue: setProofFile } = useField('proof_file')
 
 const loading = ref(false)
 const toast = ref({ show: false, message: '' })
+const backendAvailable = false // Set to true when backend is ready
 const applications = ref([
   {
     id: 1,
-    parcel_id: '12345',
+    parcel_id: 12345,
     address: 'Kigali, Rwanda',
-    status: 'Pending',
+    size: 500,
+    ownership_type: 'Individual',
+    supporting_document_url: '',
+    statusa: 'Pending',
     date: '2024-05-01',
   },
   {
     id: 2,
-    parcel_id: '54321',
+    parcel_id: 54321,
     address: 'Huye, Rwanda',
-    status: 'Completed',
+    size: 300,
+    ownership_type: 'Joint',
+    supporting_document_url: '',
+    statusa: 'Completed',
     date: '2024-05-02',
   },
   {
     id: 3,
-    parcel_id: '67890',
+    parcel_id: 67890,
     address: 'Musanze, Rwanda',
-    status: 'Rejected',
+    size: 200,
+    ownership_type: 'Company',
+    supporting_document_url: '',
+    statusa: 'Rejected',
     date: '2024-05-03',
+  },
+  {
+    id: 4,
+    parcel_id: 11223,
+    address: 'Rubavu, Rwanda',
+    size: 150,
+    ownership_type: 'Individual',
+    supporting_document_url: '',
+    statusa: 'Pending',
+    date: '2024-05-04',
+  },
+  {
+    id: 5,
+    parcel_id: 33445,
+    address: 'Nyagatare, Rwanda',
+    size: 400,
+    ownership_type: 'Joint',
+    supporting_document_url: '',
+    statusa: 'Completed',
+    date: '2024-05-05',
+  },
+  {
+    id: 6,
+    parcel_id: 55667,
+    address: 'Rusizi, Rwanda',
+    size: 250,
+    ownership_type: 'Company',
+    supporting_document_url: '',
+    statusa: 'Rejected',
+    date: '2024-05-06',
   },
 ])
 
@@ -192,19 +236,90 @@ function handleProofFileChange(files) {
   }
 }
 
-const onSubmit = handleSubmit((values) => {
+function showBackendWarning() {
+  showToast('Backend is not connected. Data will not be saved to the server.')
+}
+
+async function uploadProofFile(file) {
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`
+  const { data, error } = await supabase.storage.from('proofs').upload(fileName, file)
+  if (error) throw error
+  // Get public URL
+  const { data: publicUrlData } = supabase.storage.from('proofs').getPublicUrl(fileName)
+  return publicUrlData.publicUrl
+}
+
+async function fetchApplications() {
   loading.value = true
-  setTimeout(() => {
-    applications.value.push({
-      id: Date.now(),
-      parcel_id: values.parcel_id,
-      address: values.address,
-      status: 'Pending',
-      date: new Date().toISOString().slice(0, 10),
-    })
+  try {
+    const { data, error } = await supabase
+      .from('Land')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    applications.value = (data || []).map(app => ({
+      ...app,
+      date: app.created_at ? app.created_at.slice(0, 10) : '',
+    }))
+  } catch (err) {
+    showToast('Failed to fetch applications.')
+  } finally {
     loading.value = false
+  }
+}
+
+onMounted(() => {
+  if (backendAvailable) {
+    fetchApplications()
+  }
+})
+
+const onSubmit = handleSubmit(async (values) => {
+  loading.value = true
+  try {
+    if (!backendAvailable) {
+      showBackendWarning()
+      // Add to local mock data for demo
+      applications.value.unshift({
+        id: Date.now(),
+        parcel_id: Number(values.parcel_id),
+        address: values.address,
+        size: Number(values.size),
+        ownership_type: values.ownership_type,
+        supporting_document_url: '',
+        statusa: 'Pending',
+        date: new Date().toISOString().slice(0, 10),
+      })
+      resetForm()
+      loading.value = false
+      return
+    }
+    // 1. Upload file to Supabase Storage
+    const file = values.proof_file[0]
+    let proofFileUrl = ''
+    if (file) {
+      proofFileUrl = await uploadProofFile(file)
+    }
+    // 2. Insert record into Supabase (Land table)
+    const { error } = await supabase.from('Land').insert([
+      {
+        parcel_id: Number(values.parcel_id),
+        address: values.address,
+        size: Number(values.size),
+        ownership_type: values.ownership_type,
+        supporting_document_url: proofFileUrl,
+        statusa: 'Pending',
+      },
+    ])
+    if (error) throw error
     showToast('Application submitted successfully!')
     resetForm()
-  }, 1200)
+    await fetchApplications()
+  } catch (err) {
+    showToast('Submission failed. Please try again.')
+  } finally {
+    loading.value = false
+  }
 })
 </script>
