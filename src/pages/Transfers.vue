@@ -4,32 +4,58 @@
     <BaseCard class="mb-10 bg-white/90 border-blue-100 shadow-lg">
       <form @submit.prevent="onSubmit" class="space-y-6">
         <div>
-          <label class="block text-blue-700 font-semibold mb-1">
-            Recipient ID <span class="text-red-500">*</span>
-          </label>
-          <BaseInput v-model="recipientId" type="text" placeholder="e.g. user123" class="bg-blue-50 focus:ring-blue-400" />
-          <div v-if="recipientIdError" class="text-xs text-red-500 mt-1">{{ recipientIdError }}</div>
+          <label class="block text-blue-700 font-semibold mb-1">Select Land <span class="text-red-500">*</span></label>
+          <BaseSelect v-model="selectedLandId" class="bg-blue-50 focus:ring-blue-400 w-full">
+            <option value="">Select your land</option>
+            <option v-for="land in userLands" :key="land.id" :value="land.id">{{ land.parcel_id }} - {{ land.location }}</option>
+          </BaseSelect>
+          <div v-if="selectedLandIdError" class="text-xs text-red-500 mt-1">{{ selectedLandIdError }}</div>
         </div>
         <div>
-          <label class="block text-blue-700 font-semibold mb-1">
-            Parcel ID <span class="text-red-500">*</span>
-          </label>
+          <label class="block text-blue-700 font-semibold mb-1">Parcel ID <span class="text-red-500">*</span></label>
           <BaseInput v-model="parcelId" type="text" placeholder="e.g. 12345" class="bg-blue-50 focus:ring-blue-400" />
           <div v-if="parcelIdError" class="text-xs text-red-500 mt-1">{{ parcelIdError }}</div>
         </div>
         <div>
-          <label class="block text-blue-700 font-semibold mb-1">
-            Contract (PDF/Image) <span class="text-red-500">*</span>
-          </label>
-          <BaseInput v-model="contractFileUrl" type="url" placeholder="Paste the link to your contract document (PDF/image)" class="bg-blue-50 focus:ring-blue-400" />
-          <div v-if="contractFileUrlError" class="text-xs text-red-500 mt-1">{{ contractFileUrlError }}</div>
+          <label class="block text-blue-700 font-semibold mb-1">Transferee Name <span class="text-red-500">*</span></label>
+          <BaseInput v-model="transfereeName" type="text" placeholder="e.g. John Doe" class="bg-blue-50 focus:ring-blue-400" />
+          <div v-if="transfereeNameError" class="text-xs text-red-500 mt-1">{{ transfereeNameError }}</div>
+        </div>
+        <div>
+          <label class="block text-blue-700 font-semibold mb-1">Transferee Email <span class="text-red-500">*</span></label>
+          <BaseInput v-model="transfereeEmail" type="email" placeholder="e.g. john@example.com" class="bg-blue-50 focus:ring-blue-400" />
+          <div v-if="transfereeEmailError" class="text-xs text-red-500 mt-1">{{ transfereeEmailError }}</div>
+        </div>
+        <div>
+          <label class="block text-blue-700 font-semibold mb-1">Transfer Type <span class="text-red-500">*</span></label>
+          <BaseSelect v-model="transferType" class="bg-blue-50 focus:ring-blue-400 w-full">
+            <option value="">Select type</option>
+            <option value="sale">Sale</option>
+            <option value="gift">Gift</option>
+            <option value="inheritance">Inheritance</option>
+            <option value="other">Other</option>
+          </BaseSelect>
+          <div v-if="transferTypeError" class="text-xs text-red-500 mt-1">{{ transferTypeError }}</div>
+        </div>
+        <div>
+          <label class="block text-blue-700 font-semibold mb-1">Reason (optional)</label>
+          <BaseInput v-model="reason" type="text" placeholder="Reason for transfer (optional)" class="bg-blue-50 focus:ring-blue-400" />
+        </div>
+        <div>
+          <label class="block text-blue-700 font-semibold mb-1">Supporting Document URLs <span class="text-red-500">*</span></label>
+          <div v-for="(doc, i) in documents" :key="i" class="flex gap-2 mb-2">
+            <BaseInput v-model="documents[i]" type="url" placeholder="Paste document link (PDF/image)" class="bg-blue-50 flex-1" />
+            <BaseButton v-if="documents.length > 1" type="button" class="bg-red-500 hover:bg-red-600 px-2 py-1 text-xs" @click="documents.splice(i, 1)">Remove</BaseButton>
+          </div>
+          <BaseButton type="button" class="bg-green-600 hover:bg-green-700 px-2 py-1 text-xs mt-1" @click="documents.push('')">Add Another</BaseButton>
+          <div v-if="documentsError" class="text-xs text-red-500 mt-1">{{ documentsError }}</div>
         </div>
         <div class="pt-2 text-center">
           <BaseButton type="submit" class="bg-blue-700 hover:bg-blue-800" :disabled="loading">
             <span v-if="loading">Submitting...</span>
             <span v-else>Initiate Transfer</span>
           </BaseButton>
-        </div>
+    </div>
       </form>
     </BaseCard>
     <!-- Toast notification -->
@@ -41,24 +67,30 @@
       <h2 class="text-lg font-semibold text-blue-700 mb-4">Transfers</h2>
       <BaseTable>
         <template #head>
-          <th class="text-left px-4 py-2">Recipient ID</th>
           <th class="text-left px-4 py-2">Parcel ID</th>
+          <th class="text-left px-4 py-2">Transferee Name</th>
+          <th class="text-left px-4 py-2">Transferee Email</th>
+          <th class="text-left px-4 py-2">Type</th>
           <th class="text-left px-4 py-2">Status</th>
           <th class="text-left px-4 py-2">Date</th>
-          <th class="text-left px-4 py-2">Contract</th>
+          <th class="text-left px-4 py-2">Documents</th>
           <th class="text-left px-4 py-2">Actions</th>
         </template>
         <tr v-for="transfer in transfers" :key="transfer.id">
-          <td class="px-4 py-2">{{ transfer.recipient_name }}</td>
           <td class="px-4 py-2">{{ transfer.parcel_id }}</td>
+          <td class="px-4 py-2">{{ transfer.transferee_name }}</td>
+          <td class="px-4 py-2">{{ transfer.transferee_email }}</td>
+          <td class="px-4 py-2">{{ transfer.transfer_type }}</td>
           <td class="px-4 py-2">
-            <span v-if="transfer.status === 'Pending'" class="text-yellow-600 font-semibold">Pending</span>
-            <span v-else-if="transfer.status === 'Completed'" class="text-green-600 font-semibold">Completed</span>
-            <span v-else-if="transfer.status === 'Rejected'" class="text-red-600 font-semibold">Rejected</span>
+            <span v-if="transfer.status === 'pending'" class="text-yellow-600 font-semibold">Pending</span>
+            <span v-else-if="transfer.status === 'completed'" class="text-green-600 font-semibold">Completed</span>
+            <span v-else-if="transfer.status === 'rejected'" class="text-red-600 font-semibold">Rejected</span>
           </td>
           <td class="px-4 py-2">{{ transfer.date }}</td>
           <td class="px-4 py-2">
-            <a v-if="transfer.contract_document_url" :href="transfer.contract_document_url" target="_blank" class="text-blue-600 underline">View</a>
+            <div v-if="transfer.documents && transfer.documents.length">
+              <a v-for="(doc, i) in transfer.documents" :key="i" :href="doc" target="_blank" class="text-blue-600 underline block">View {{ i + 1 }}</a>
+            </div>
             <span v-else class="text-gray-400">—</span>
           </td>
           <td class="px-4 py-2 space-x-2">
@@ -96,7 +128,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
-import BaseFileUpload from '@/components/ui/BaseFileUpload.vue'
+import BaseSelect from '@/components/ui/BaseSelect.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseTable from '@/components/ui/BaseTable.vue'
@@ -104,22 +136,29 @@ import BaseModal from '@/components/ui/BaseModal.vue'
 import BaseToast from '@/components/ui/BaseToast.vue'
 import { supabase } from '@/lib/supabase'
 
-// Form state
 const recipientId = ref('')
 const parcelId = ref('')
-const contractFileUrl = ref('')
+const transfereeName = ref('')
+const transfereeEmail = ref('')
+const transferType = ref('')
+const reason = ref('')
+const documents = ref([''])
+const selectedLandId = ref('')
+const userLands = ref([])
+
 const recipientIdError = ref('')
 const parcelIdError = ref('')
-const contractFileUrlError = ref('')
+const transfereeNameError = ref('')
+const transfereeEmailError = ref('')
+const transferTypeError = ref('')
+const documentsError = ref('')
+const selectedLandIdError = ref('')
+
 const loading = ref(false)
 const toast = ref({ show: false, message: '' })
-
-const backendAvailable = true // Set to true to use Supabase backend
-
-// Transfers list (mock data for now)
+const backendAvailable = true
 const transfers = ref([])
 
-// Modal state
 const showUpdateModal = ref(false)
 const showDeleteModal = ref(false)
 let transferToModify = null
@@ -127,10 +166,12 @@ let transferToModify = null
 function validateForm() {
   recipientIdError.value = recipientId.value.trim() === '' ? 'Recipient ID is required' : ''
   parcelIdError.value = parcelId.value.trim() === '' ? 'Parcel ID is required' : ''
-  // Validate contractFileUrl as a URL
-  const urlPattern = /^(https?:\/\/)[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!$&'()*+,;=.]+$/
-  contractFileUrlError.value = !urlPattern.test(contractFileUrl.value) ? 'A valid contract document URL is required' : ''
-  return !recipientIdError.value && !parcelIdError.value && !contractFileUrlError.value
+  transfereeNameError.value = transfereeName.value.trim() === '' ? 'Transferee name is required' : ''
+  transfereeEmailError.value = !/^\S+@\S+\.\S+$/.test(transfereeEmail.value) ? 'Valid email required' : ''
+  transferTypeError.value = transferType.value.trim() === '' ? 'Transfer type is required' : ''
+  selectedLandIdError.value = selectedLandId.value.trim() === '' ? 'Please select a land' : ''
+  documentsError.value = !Array.isArray(documents.value) || documents.value.length === 0 || !documents.value.every(url => /^(https?:\/\/)[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!$&'()*+,;=.]+$/.test(url)) ? 'At least one valid document URL is required' : ''
+  return !recipientIdError.value && !parcelIdError.value && !transfereeNameError.value && !transfereeEmailError.value && !transferTypeError.value && !selectedLandIdError.value && !documentsError.value
 }
 
 function showBackendWarning() {
@@ -138,12 +179,25 @@ function showBackendWarning() {
   setTimeout(() => (toast.value.show = false), 2000)
 }
 
+async function fetchUserLands() {
+  const { data: userData } = await supabase.auth.getUser()
+  if (!userData?.user) return
+  const { data, error } = await supabase
+    .from('lands')
+    .select('id, parcel_id, location')
+    .eq('user_id', userData.user.id)
+  if (!error) userLands.value = data || []
+}
+
 async function fetchTransfers() {
   loading.value = true
   try {
+    const { data: userData } = await supabase.auth.getUser()
+    if (!userData?.user) throw new Error('User not authenticated')
     const { data, error } = await supabase
       .from('transfers')
       .select('*')
+      .eq('user_id', userData.user.id)
       .order('created_at', { ascending: false })
     if (error) throw error
     transfers.value = (data || []).map(t => ({
@@ -159,37 +213,32 @@ async function fetchTransfers() {
 
 onMounted(() => {
   if (backendAvailable) {
+    fetchUserLands()
     fetchTransfers()
   }
 })
 
 async function onSubmit() {
-  if (!validateForm()) return
+  console.log('onSubmit called');
+  if (!validateForm()) {
+    console.log('Validation failed');
+    return;
+  }
   loading.value = true
   try {
-    if (!backendAvailable) {
-      showBackendWarning()
-      transfers.value.unshift({
-        id: Date.now(),
-        recipient_name: recipientId.value,
-        parcel_id: parcelId.value,
-        status: 'Pending',
-        date: new Date().toISOString().slice(0, 10),
-        contract_document_url: contractFileUrl.value,
-      })
-      recipientId.value = ''
-      parcelId.value = ''
-      contractFileUrl.value = ''
-      loading.value = false
-      return
-    }
-    // Insert transfer record
+    const { data: userData } = await supabase.auth.getUser()
+    if (!userData?.user) throw new Error('User not authenticated')
     const { error } = await supabase.from('transfers').insert([
       {
-        recipient_name: recipientId.value,
+        user_id: userData.user.id,
+        land_id: selectedLandId.value,
         parcel_id: parcelId.value,
-        contract_document_url: contractFileUrl.value,
-        status: 'Pending',
+        transferee_name: transfereeName.value,
+        transferee_email: transfereeEmail.value,
+        transfer_type: transferType.value,
+        reason: reason.value,
+        status: 'pending',
+        documents: documents.value,
       },
     ])
     if (error) throw error
@@ -197,7 +246,12 @@ async function onSubmit() {
     setTimeout(() => (toast.value.show = false), 2000)
     recipientId.value = ''
     parcelId.value = ''
-    contractFileUrl.value = ''
+    transfereeName.value = ''
+    transfereeEmail.value = ''
+    transferType.value = ''
+    reason.value = ''
+    documents.value = ['']
+    selectedLandId.value = ''
     await fetchTransfers()
   } catch (err) {
     toast.value = { show: true, message: 'Submission failed. Please try again.' }
@@ -207,11 +261,11 @@ async function onSubmit() {
   }
 }
 
-function openUpdateModal(transfer: any) {
+function openUpdateModal(transfer) {
   transferToModify = transfer
   showUpdateModal.value = true
 }
-function openDeleteModal(transfer: any) {
+function openDeleteModal(transfer) {
   transferToModify = transfer
   showDeleteModal.value = true
 }
