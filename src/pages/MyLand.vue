@@ -229,17 +229,17 @@ const onSubmit = handleSubmit(async (values) => {
     if (!backendAvailable) {
       showBackendWarning()
       applications.value.unshift({
-        id: Date.now(),
-        parcel_id: values.parcel_id,
+      id: Date.now(),
+      parcel_id: values.parcel_id,
         size: values.size,
         location: values.location,
         ownership_type: values.ownership_type,
         documents: [...values.documents],
         status: 'pending',
-        date: new Date().toISOString().slice(0, 10),
-      })
+      date: new Date().toISOString().slice(0, 10),
+    })
       resetForm()
-      loading.value = false
+    loading.value = false
       return
     }
     // Insert record into Supabase (lands table)

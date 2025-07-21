@@ -5,9 +5,9 @@
       <!-- Left: Text -->
       <div class="flex-1 flex flex-col items-start justify-center z-10">
         <h1 class="text-5xl md:text-6xl font-extrabold text-blue-900 mb-4 leading-tight drop-shadow-lg">
-          Rwanda Land Portal
+          Land Management System
         </h1>
-        <p class="text-2xl text-blue-700 font-semibold mb-4">Empowering Land Management for All</p>
+        <p class="text-2xl text-blue-700 font-semibold mb-4">Empowering Rwanda's Land Future</p>
         <p class="text-lg text-gray-700 mb-8 max-w-xl">
           A modern, transparent, and efficient platform for citizens and authorities to register, transfer, and manage land with confidence and ease.
         </p>
@@ -28,7 +28,7 @@
       <!-- Right: Hero Image -->
       <div class="flex-1 flex items-center justify-center z-0">
         <img
-          src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80"
+          src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=700&q=80"
           alt="Rwanda landscape"
           class="rounded-3xl shadow-2xl w-full max-w-md object-cover border-4 border-white/80"
         />
@@ -36,7 +36,7 @@
     </div>
 
     <!-- Features Section -->
-    <div class="bg-white/80 py-12 px-4 mt-4 shadow-inner">
+    <div class="bg-white/90 py-12 px-4 mt-4 shadow-inner">
       <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
         <div class="flex flex-col items-center text-center">
           <svg class="w-12 h-12 text-blue-600 mb-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7l9-4 9 4-9 4-9-4zm0 0v6a9 9 0 009 9 9 9 0 009-9V7"></path></svg>
@@ -56,7 +56,7 @@
       </div>
     </div>
 
-    <footer class="mt-10 text-blue-600 text-sm opacity-70 z-10 text-center">&copy; 2024 Rwanda Land Portal. All rights reserved.</footer>
+    <footer class="mt-10 text-blue-600 text-sm opacity-70 z-10 text-center">&copy; 2024 Land Management System. All rights reserved.</footer>
   </div>
 </template>
 

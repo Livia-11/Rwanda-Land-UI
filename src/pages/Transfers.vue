@@ -63,42 +63,44 @@
       <span class="font-semibold">{{ toast.message }}</span>
     </BaseToast>
     <!-- List of transfers -->
-    <BaseCard class="bg-white/90 border-blue-100 shadow">
+    <BaseCard class="bg-white/90 border-blue-100 shadow overflow-x-auto">
       <h2 class="text-lg font-semibold text-blue-700 mb-4">Transfers</h2>
-      <BaseTable>
-        <template #head>
-          <th class="text-left px-4 py-2">Parcel ID</th>
-          <th class="text-left px-4 py-2">Transferee Name</th>
-          <th class="text-left px-4 py-2">Transferee Email</th>
-          <th class="text-left px-4 py-2">Type</th>
-          <th class="text-left px-4 py-2">Status</th>
-          <th class="text-left px-4 py-2">Date</th>
-          <th class="text-left px-4 py-2">Documents</th>
-          <th class="text-left px-4 py-2">Actions</th>
-        </template>
-        <tr v-for="transfer in transfers" :key="transfer.id">
-          <td class="px-4 py-2">{{ transfer.parcel_id }}</td>
-          <td class="px-4 py-2">{{ transfer.transferee_name }}</td>
-          <td class="px-4 py-2">{{ transfer.transferee_email }}</td>
-          <td class="px-4 py-2">{{ transfer.transfer_type }}</td>
-          <td class="px-4 py-2">
-            <span v-if="transfer.status === 'pending'" class="text-yellow-600 font-semibold">Pending</span>
-            <span v-else-if="transfer.status === 'completed'" class="text-green-600 font-semibold">Completed</span>
-            <span v-else-if="transfer.status === 'rejected'" class="text-red-600 font-semibold">Rejected</span>
-          </td>
-          <td class="px-4 py-2">{{ transfer.date }}</td>
-          <td class="px-4 py-2">
-            <div v-if="transfer.documents && transfer.documents.length">
-              <a v-for="(doc, i) in transfer.documents" :key="i" :href="doc" target="_blank" class="text-blue-600 underline block">View {{ i + 1 }}</a>
-            </div>
-            <span v-else class="text-gray-400">—</span>
-          </td>
-          <td class="px-4 py-2 space-x-2">
-            <BaseButton class="bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs" @click="openUpdateModal(transfer)">Update</BaseButton>
-            <BaseButton class="bg-red-600 hover:bg-red-700 px-2 py-1 text-xs" @click="openDeleteModal(transfer)">Delete</BaseButton>
-          </td>
-        </tr>
-      </BaseTable>
+      <div class="w-full">
+        <BaseTable class="min-w-full">
+          <template #head>
+            <th class="text-left px-4 py-2 whitespace-nowrap">Parcel ID</th>
+            <th class="text-left px-4 py-2 whitespace-nowrap">Transferee Name</th>
+            <th class="text-left px-4 py-2 whitespace-nowrap">Transferee Email</th>
+            <th class="text-left px-4 py-2 whitespace-nowrap">Type</th>
+            <th class="text-left px-4 py-2 whitespace-nowrap">Status</th>
+            <th class="text-left px-4 py-2 whitespace-nowrap">Date</th>
+            <th class="text-left px-4 py-2 whitespace-nowrap">Documents</th>
+            <th class="text-left px-4 py-2 whitespace-nowrap">Actions</th>
+          </template>
+          <tr v-for="transfer in transfers" :key="transfer.id" class="hover:bg-blue-50 transition-colors">
+            <td class="px-4 py-2 whitespace-nowrap">{{ transfer.parcel_id }}</td>
+            <td class="px-4 py-2 whitespace-nowrap">{{ transfer.transferee_name }}</td>
+            <td class="px-4 py-2 whitespace-nowrap">{{ transfer.transferee_email }}</td>
+            <td class="px-4 py-2 whitespace-nowrap capitalize">{{ transfer.transfer_type }}</td>
+            <td class="px-4 py-2 whitespace-nowrap">
+              <span v-if="transfer.status === 'pending'" class="text-yellow-600 font-semibold">Pending</span>
+              <span v-else-if="transfer.status === 'completed'" class="text-green-600 font-semibold">Completed</span>
+              <span v-else-if="transfer.status === 'rejected'" class="text-red-600 font-semibold">Rejected</span>
+            </td>
+            <td class="px-4 py-2 whitespace-nowrap">{{ transfer.date }}</td>
+            <td class="px-4 py-2 whitespace-nowrap">
+              <div v-if="transfer.documents && transfer.documents.length">
+                <a v-for="(doc, i) in transfer.documents" :key="i" :href="doc" target="_blank" class="text-blue-600 underline block truncate max-w-xs">View {{ i + 1 }}</a>
+              </div>
+              <span v-else class="text-gray-400">—</span>
+            </td>
+            <td class="px-4 py-2 whitespace-nowrap space-x-2">
+              <BaseButton class="bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs" @click="openUpdateModal(transfer)">Update</BaseButton>
+              <BaseButton class="bg-red-600 hover:bg-red-700 px-2 py-1 text-xs" @click="openDeleteModal(transfer)">Delete</BaseButton>
+            </td>
+          </tr>
+        </BaseTable>
+      </div>
     </BaseCard>
     <!-- Update Modal Placeholder -->
     <BaseModal :open="showUpdateModal" @close="showUpdateModal = false">
@@ -127,26 +129,43 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import BaseInput from '@/components/ui/BaseInput.vue'
-import BaseSelect from '@/components/ui/BaseSelect.vue'
-import BaseButton from '@/components/ui/BaseButton.vue'
-import BaseCard from '@/components/ui/BaseCard.vue'
-import BaseTable from '@/components/ui/BaseTable.vue'
-import BaseModal from '@/components/ui/BaseModal.vue'
-import BaseToast from '@/components/ui/BaseToast.vue'
-import { supabase } from '@/lib/supabase'
+import BaseInput from '../components/ui/BaseInput.vue'
+import BaseSelect from '../components/ui/BaseSelect.vue'
+import BaseButton from '../components/ui/BaseButton.vue'
+import BaseCard from '../components/ui/BaseCard.vue'
+import BaseTable from '../components/ui/BaseTable.vue'
+import BaseModal from '../components/ui/BaseModal.vue'
+import BaseToast from '../components/ui/BaseToast.vue'
+import { supabase } from '../lib/supabase'
 
-const recipientId = ref('')
+interface Land {
+  id: string
+  parcel_id: string
+  location: string
+}
+interface Transfer {
+  id: string
+  land_id: string
+  parcel_id: string
+  transferee_name: string
+  transferee_email: string
+  transfer_type: string
+  reason?: string
+  status: string
+  documents: string[]
+  created_at?: string
+  date?: string
+}
+
 const parcelId = ref('')
 const transfereeName = ref('')
 const transfereeEmail = ref('')
 const transferType = ref('')
 const reason = ref('')
-const documents = ref([''])
+const documents = ref<string[]>([''])
 const selectedLandId = ref('')
-const userLands = ref([])
+const userLands = ref<Land[]>([])
 
-const recipientIdError = ref('')
 const parcelIdError = ref('')
 const transfereeNameError = ref('')
 const transfereeEmailError = ref('')
@@ -157,21 +176,20 @@ const selectedLandIdError = ref('')
 const loading = ref(false)
 const toast = ref({ show: false, message: '' })
 const backendAvailable = true
-const transfers = ref([])
+const transfers = ref<Transfer[]>([])
 
 const showUpdateModal = ref(false)
 const showDeleteModal = ref(false)
-let transferToModify = null
+let transferToModify: Transfer | null = null
 
 function validateForm() {
-  recipientIdError.value = recipientId.value.trim() === '' ? 'Recipient ID is required' : ''
-  parcelIdError.value = parcelId.value.trim() === '' ? 'Parcel ID is required' : ''
-  transfereeNameError.value = transfereeName.value.trim() === '' ? 'Transferee name is required' : ''
-  transfereeEmailError.value = !/^\S+@\S+\.\S+$/.test(transfereeEmail.value) ? 'Valid email required' : ''
-  transferTypeError.value = transferType.value.trim() === '' ? 'Transfer type is required' : ''
-  selectedLandIdError.value = selectedLandId.value.trim() === '' ? 'Please select a land' : ''
-  documentsError.value = !Array.isArray(documents.value) || documents.value.length === 0 || !documents.value.every(url => /^(https?:\/\/)[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!$&'()*+,;=.]+$/.test(url)) ? 'At least one valid document URL is required' : ''
-  return !recipientIdError.value && !parcelIdError.value && !transfereeNameError.value && !transfereeEmailError.value && !transferTypeError.value && !selectedLandIdError.value && !documentsError.value
+  parcelIdError.value = parcelId.value.trim() === '' ? 'Parcel ID is required' : '';
+  transfereeNameError.value = transfereeName.value.trim() === '' ? 'Transferee name is required' : '';
+  transfereeEmailError.value = !/^\S+@\S+\.\S+$/.test(transfereeEmail.value) ? 'Valid email required' : '';
+  transferTypeError.value = transferType.value.trim() === '' ? 'Transfer type is required' : '';
+  selectedLandIdError.value = selectedLandId.value.trim() === '' ? 'Please select a land' : '';
+  documentsError.value = !Array.isArray(documents.value) || documents.value.length === 0 || !documents.value.every(url => /^(https?:\/\/)[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!$&'()*+,;=.]+$/.test(url)) ? 'At least one valid document URL is required' : '';
+  return !parcelIdError.value && !transfereeNameError.value && !transfereeEmailError.value && !transferTypeError.value && !selectedLandIdError.value && !documentsError.value;
 }
 
 function showBackendWarning() {
@@ -186,7 +204,7 @@ async function fetchUserLands() {
     .from('lands')
     .select('id, parcel_id, location')
     .eq('user_id', userData.user.id)
-  if (!error) userLands.value = data || []
+  if (!error) userLands.value = (data as Land[]) || []
 }
 
 async function fetchTransfers() {
@@ -200,7 +218,7 @@ async function fetchTransfers() {
       .eq('user_id', userData.user.id)
       .order('created_at', { ascending: false })
     if (error) throw error
-    transfers.value = (data || []).map(t => ({
+    transfers.value = ((data as Transfer[]) || []).map(t => ({
       ...t,
       date: t.created_at ? t.created_at.slice(0, 10) : '',
     }))
@@ -219,9 +237,7 @@ onMounted(() => {
 })
 
 async function onSubmit() {
-  console.log('onSubmit called');
   if (!validateForm()) {
-    console.log('Validation failed');
     return;
   }
   loading.value = true
@@ -244,7 +260,6 @@ async function onSubmit() {
     if (error) throw error
     toast.value = { show: true, message: 'Transfer initiated successfully!' }
     setTimeout(() => (toast.value.show = false), 2000)
-    recipientId.value = ''
     parcelId.value = ''
     transfereeName.value = ''
     transfereeEmail.value = ''
@@ -261,17 +276,17 @@ async function onSubmit() {
   }
 }
 
-function openUpdateModal(transfer) {
+function openUpdateModal(transfer: Transfer) {
   transferToModify = transfer
   showUpdateModal.value = true
 }
-function openDeleteModal(transfer) {
+function openDeleteModal(transfer: Transfer) {
   transferToModify = transfer
   showDeleteModal.value = true
 }
 function confirmDelete() {
   if (transferToModify) {
-    transfers.value = transfers.value.filter(t => t.id !== transferToModify.id)
+    transfers.value = transfers.value.filter(t => t.id !== transferToModify!.id)
     toast.value = { show: true, message: 'Transfer deleted.' }
     setTimeout(() => (toast.value.show = false), 2000)
   }
