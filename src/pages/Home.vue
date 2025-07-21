@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import BaseCard from '@/components/ui/BaseCard.vue'
-import BaseButton from '@/components/ui/BaseButton.vue'
+import BaseCard from '../components/ui/BaseCard.vue'
+import BaseButton from '../components/ui/BaseButton.vue'
 import { RouterLink } from 'vue-router'
 </script> 
