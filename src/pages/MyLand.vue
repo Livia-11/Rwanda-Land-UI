@@ -18,19 +18,6 @@
         </div>
         <div>
           <label class="block text-blue-700 font-semibold mb-1">
-            Address <span class="text-red-500">*</span>
-          </label>
-          <BaseInput
-            v-model="address"
-            type="text"
-            placeholder="e.g. Kigali, Rwanda"
-            class="bg-blue-50 focus:ring-blue-400"
-          />
-          <span class="text-xs text-gray-500">Location of the land.</span>
-          <div v-if="addressError" class="text-xs text-red-500 mt-1">{{ addressError }}</div>
-        </div>
-        <div>
-          <label class="block text-blue-700 font-semibold mb-1">
             Land Size (m²) <span class="text-red-500">*</span>
           </label>
           <BaseInput
@@ -41,6 +28,19 @@
           />
           <span class="text-xs text-gray-500">Enter size in square meters.</span>
           <div v-if="sizeError" class="text-xs text-red-500 mt-1">{{ sizeError }}</div>
+        </div>
+        <div>
+          <label class="block text-blue-700 font-semibold mb-1">
+            Location <span class="text-red-500">*</span>
+          </label>
+          <BaseInput
+            v-model="location"
+            type="text"
+            placeholder="e.g. Kigali, Rwanda"
+            class="bg-blue-50 focus:ring-blue-400"
+          />
+          <span class="text-xs text-gray-500">Location of the land.</span>
+          <div v-if="locationError" class="text-xs text-red-500 mt-1">{{ locationError }}</div>
         </div>
         <div>
           <label class="block text-blue-700 font-semibold mb-1">
@@ -59,15 +59,14 @@
         </div>
         <div>
           <label class="block text-blue-700 font-semibold mb-1">
-            Proof of Ownership (PDF/Image) <span class="text-red-500">*</span>
+            Supporting Document URLs <span class="text-red-500">*</span>
           </label>
-          <BaseFileUpload
-            accept=".pdf,image/*"
-            class="bg-blue-50 focus:ring-blue-400"
-            @change="e => handleProofFileChange(e.target.files)"
-          />
-          <span class="text-xs text-gray-500">Upload a PDF or image file.</span>
-          <div v-if="proofFileError" class="text-xs text-red-500 mt-1">{{ proofFileError }}</div>
+          <div v-for="(doc, i) in documents" :key="i" class="flex gap-2 mb-2">
+            <BaseInput v-model="documents[i]" type="url" placeholder="Paste document link (PDF/image)" class="bg-blue-50 flex-1" />
+            <BaseButton v-if="documents.length > 1" type="button" class="bg-red-500 hover:bg-red-600 px-2 py-1 text-xs" @click="documents.splice(i, 1)">Remove</BaseButton>
+          </div>
+          <BaseButton type="button" class="bg-green-600 hover:bg-green-700 px-2 py-1 text-xs mt-1" @click="documents.push('')">Add Another</BaseButton>
+          <div v-if="documentsError" class="text-xs text-red-500 mt-1">{{ documentsError }}</div>
         </div>
         <div class="pt-2 text-center">
           <BaseButton type="submit" class="bg-blue-700 hover:bg-blue-800" :disabled="loading">
@@ -91,19 +90,26 @@
       <BaseTable>
         <template #head>
           <th class="text-left px-4 py-2">Parcel ID</th>
-          <th class="text-left px-4 py-2">Address</th>
+          <th class="text-left px-4 py-2">Location</th>
           <th class="text-left px-4 py-2">Status</th>
           <th class="text-left px-4 py-2">Submission Date</th>
+          <th class="text-left px-4 py-2">Documents</th>
         </template>
         <tr v-for="app in applications" :key="app.id">
           <td class="px-4 py-2">{{ app.parcel_id }}</td>
-          <td class="px-4 py-2">{{ app.address }}</td>
+          <td class="px-4 py-2">{{ app.location }}</td>
           <td class="px-4 py-2">
-            <span v-if="app.statusa === 'Pending'" class="text-yellow-600 font-semibold">Pending</span>
-            <span v-else-if="app.statusa === 'Completed'" class="text-green-600 font-semibold">Completed</span>
-            <span v-else-if="app.statusa === 'Rejected'" class="text-red-600 font-semibold">Rejected</span>
+            <span v-if="app.status === 'pending'" class="text-yellow-600 font-semibold">Pending</span>
+            <span v-else-if="app.status === 'completed'" class="text-green-600 font-semibold">Completed</span>
+            <span v-else-if="app.status === 'rejected'" class="text-red-600 font-semibold">Rejected</span>
           </td>
           <td class="px-4 py-2">{{ app.date }}</td>
+          <td class="px-4 py-2">
+            <div v-if="app.documents && app.documents.length">
+              <a v-for="(doc, i) in app.documents" :key="i" :href="doc" target="_blank" class="text-blue-600 underline block">View {{ i + 1 }}</a>
+            </div>
+            <span v-else class="text-gray-400">—</span>
+          </td>
         </tr>
       </BaseTable>
     </BaseCard>
@@ -129,97 +135,36 @@ import { supabase } from '@/lib/supabase'
 
 const initialValues = {
   parcel_id: '',
-  address: '',
   size: '',
+  location: '',
   ownership_type: '',
-  proof_file: [], // Store as array for consistency
+  documents: [''], // Array of URLs, at least one
 }
 
 const { handleSubmit, resetForm } = useForm({
   initialValues,
   validationSchema: {
     parcel_id: value => typeof value === 'string' && value.trim() !== '' || 'Parcel ID is required',
-    address: value => typeof value === 'string' && value.trim() !== '' || 'Address is required',
     size: value => {
       const num = Number(value)
       return (!isNaN(num) && num > 0) || 'Land size is required'
     },
+    location: value => typeof value === 'string' && value.trim() !== '' || 'Location is required',
     ownership_type: value => typeof value === 'string' && value.trim() !== '' || 'Ownership type is required',
-    proof_file: value => Array.isArray(value) && value.length > 0 && value[0] instanceof File || 'Proof file is required',
+    documents: value => Array.isArray(value) && value.length > 0 && value.every(url => /^(https?:\/\/)[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!$&'()*+,;=.]+$/.test(url)) || 'At least one valid document URL is required',
   },
 })
 
 const { value: parcelId, errorMessage: parcelIdError } = useField('parcel_id')
-const { value: address, errorMessage: addressError } = useField('address')
 const { value: size, errorMessage: sizeError } = useField('size')
+const { value: location, errorMessage: locationError } = useField('location')
 const { value: ownershipType, errorMessage: ownershipTypeError } = useField('ownership_type')
-const { value: proofFile, errorMessage: proofFileError, setValue: setProofFile } = useField('proof_file')
+const { value: documents, errorMessage: documentsError } = useField('documents')
 
 const loading = ref(false)
 const toast = ref({ show: false, message: '' })
-const backendAvailable = false // Set to true when backend is ready
-const applications = ref([
-  {
-    id: 1,
-    parcel_id: 12345,
-    address: 'Kigali, Rwanda',
-    size: 500,
-    ownership_type: 'Individual',
-    supporting_document_url: '',
-    statusa: 'Pending',
-    date: '2024-05-01',
-  },
-  {
-    id: 2,
-    parcel_id: 54321,
-    address: 'Huye, Rwanda',
-    size: 300,
-    ownership_type: 'Joint',
-    supporting_document_url: '',
-    statusa: 'Completed',
-    date: '2024-05-02',
-  },
-  {
-    id: 3,
-    parcel_id: 67890,
-    address: 'Musanze, Rwanda',
-    size: 200,
-    ownership_type: 'Company',
-    supporting_document_url: '',
-    statusa: 'Rejected',
-    date: '2024-05-03',
-  },
-  {
-    id: 4,
-    parcel_id: 11223,
-    address: 'Rubavu, Rwanda',
-    size: 150,
-    ownership_type: 'Individual',
-    supporting_document_url: '',
-    statusa: 'Pending',
-    date: '2024-05-04',
-  },
-  {
-    id: 5,
-    parcel_id: 33445,
-    address: 'Nyagatare, Rwanda',
-    size: 400,
-    ownership_type: 'Joint',
-    supporting_document_url: '',
-    statusa: 'Completed',
-    date: '2024-05-05',
-  },
-  {
-    id: 6,
-    parcel_id: 55667,
-    address: 'Rusizi, Rwanda',
-    size: 250,
-    ownership_type: 'Company',
-    supporting_document_url: '',
-    statusa: 'Rejected',
-    date: '2024-05-06',
-  },
-])
+const backendAvailable = true // Set to true to use Supabase backend
+const applications = ref([])
 
 function showToast(message) {
   toast.value = { show: true, message }
@@ -253,9 +198,12 @@ async function uploadProofFile(file) {
 async function fetchApplications() {
   loading.value = true
   try {
+    const user = supabase.auth.getUser ? (await supabase.auth.getUser()).data.user : null
+    if (!user) throw new Error('User not authenticated')
     const { data, error } = await supabase
-      .from('Land')
+      .from('lands')
       .select('*')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
     if (error) throw error
     applications.value = (data || []).map(app => ({
@@ -280,36 +228,31 @@ const onSubmit = handleSubmit(async (values) => {
   try {
     if (!backendAvailable) {
       showBackendWarning()
-      // Add to local mock data for demo
       applications.value.unshift({
         id: Date.now(),
-        parcel_id: Number(values.parcel_id),
-        address: values.address,
-        size: Number(values.size),
+        parcel_id: values.parcel_id,
+        size: values.size,
+        location: values.location,
         ownership_type: values.ownership_type,
-        supporting_document_url: '',
-        statusa: 'Pending',
+        documents: [...values.documents],
+        status: 'pending',
         date: new Date().toISOString().slice(0, 10),
       })
       resetForm()
       loading.value = false
       return
     }
-    // 1. Upload file to Supabase Storage
-    const file = values.proof_file[0]
-    let proofFileUrl = ''
-    if (file) {
-      proofFileUrl = await uploadProofFile(file)
-    }
-    // 2. Insert record into Supabase (Land table)
-    const { error } = await supabase.from('Land').insert([
+    // Insert record into Supabase (lands table)
+    const user = supabase.auth.getUser ? (await supabase.auth.getUser()).data.user : null
+    if (!user) throw new Error('User not authenticated')
+    const { error } = await supabase.from('lands').insert([
       {
-        parcel_id: Number(values.parcel_id),
-        address: values.address,
-        size: Number(values.size),
+        user_id: user.id,
+        parcel_id: values.parcel_id,
+        size: values.size,
+        location: values.location,
         ownership_type: values.ownership_type,
-        supporting_document_url: proofFileUrl,
-        statusa: 'Pending',
+        documents: values.documents,
       },
     ])
     if (error) throw error

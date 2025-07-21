@@ -21,8 +21,8 @@
           <label class="block text-blue-700 font-semibold mb-1">
             Contract (PDF/Image) <span class="text-red-500">*</span>
           </label>
-          <BaseFileUpload accept=".pdf,image/*" class="bg-blue-50 focus:ring-blue-400" @change="e => handleContractFileChange(e.target.files)" />
-          <div v-if="contractFileError" class="text-xs text-red-500 mt-1">{{ contractFileError }}</div>
+          <BaseInput v-model="contractFileUrl" type="url" placeholder="Paste the link to your contract document (PDF/image)" class="bg-blue-50 focus:ring-blue-400" />
+          <div v-if="contractFileUrlError" class="text-xs text-red-500 mt-1">{{ contractFileUrlError }}</div>
         </div>
         <div class="pt-2 text-center">
           <BaseButton type="submit" class="bg-blue-700 hover:bg-blue-800" :disabled="loading">
@@ -45,6 +45,7 @@
           <th class="text-left px-4 py-2">Parcel ID</th>
           <th class="text-left px-4 py-2">Status</th>
           <th class="text-left px-4 py-2">Date</th>
+          <th class="text-left px-4 py-2">Contract</th>
           <th class="text-left px-4 py-2">Actions</th>
         </template>
         <tr v-for="transfer in transfers" :key="transfer.id">
@@ -56,6 +57,10 @@
             <span v-else-if="transfer.status === 'Rejected'" class="text-red-600 font-semibold">Rejected</span>
           </td>
           <td class="px-4 py-2">{{ transfer.date }}</td>
+          <td class="px-4 py-2">
+            <a v-if="transfer.contract_document_url" :href="transfer.contract_document_url" target="_blank" class="text-blue-600 underline">View</a>
+            <span v-else class="text-gray-400">—</span>
+          </td>
           <td class="px-4 py-2 space-x-2">
             <BaseButton class="bg-blue-600 hover:bg-blue-700 px-2 py-1 text-xs" @click="openUpdateModal(transfer)">Update</BaseButton>
             <BaseButton class="bg-red-600 hover:bg-red-700 px-2 py-1 text-xs" @click="openDeleteModal(transfer)">Delete</BaseButton>
@@ -102,50 +107,35 @@ import { supabase } from '@/lib/supabase'
 // Form state
 const recipientId = ref('')
 const parcelId = ref('')
-const contractFile = ref([])
+const contractFileUrl = ref('')
 const recipientIdError = ref('')
 const parcelIdError = ref('')
-const contractFileError = ref('')
+const contractFileUrlError = ref('')
 const loading = ref(false)
 const toast = ref({ show: false, message: '' })
 
-const backendAvailable = false // Set to true when backend is ready
+const backendAvailable = true // Set to true to use Supabase backend
 
 // Transfers list (mock data for now)
-const transfers = ref([
-  { id: 1, recipient_name: 'user123', parcel_id: '12345', status: 'Pending', date: '2024-05-01', contract_document_url: '' },
-  { id: 2, recipient_name: 'user456', parcel_id: '54321', status: 'Completed', date: '2024-05-02', contract_document_url: '' },
-  { id: 3, recipient_name: 'user789', parcel_id: '67890', status: 'Rejected', date: '2024-05-03', contract_document_url: '' },
-])
+const transfers = ref([])
 
 // Modal state
 const showUpdateModal = ref(false)
 const showDeleteModal = ref(false)
 let transferToModify = null
 
-function handleContractFileChange(files: FileList) {
-  contractFile.value = files && files.length > 0 ? Array.from(files) : []
-}
-
 function validateForm() {
   recipientIdError.value = recipientId.value.trim() === '' ? 'Recipient ID is required' : ''
   parcelIdError.value = parcelId.value.trim() === '' ? 'Parcel ID is required' : ''
-  contractFileError.value = !contractFile.value.length ? 'Contract file is required' : ''
-  return !recipientIdError.value && !parcelIdError.value && !contractFileError.value
+  // Validate contractFileUrl as a URL
+  const urlPattern = /^(https?:\/\/)[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!$&'()*+,;=.]+$/
+  contractFileUrlError.value = !urlPattern.test(contractFileUrl.value) ? 'A valid contract document URL is required' : ''
+  return !recipientIdError.value && !parcelIdError.value && !contractFileUrlError.value
 }
 
 function showBackendWarning() {
   toast.value = { show: true, message: 'Backend is not connected. Data will not be saved to the server.' }
   setTimeout(() => (toast.value.show = false), 2000)
-}
-
-async function uploadContractFile(file) {
-  const fileExt = file.name.split('.').pop()
-  const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`
-  const { data, error } = await supabase.storage.from('proofs').upload(fileName, file)
-  if (error) throw error
-  const { data: publicUrlData } = supabase.storage.from('proofs').getPublicUrl(fileName)
-  return publicUrlData.publicUrl
 }
 
 async function fetchTransfers() {
@@ -185,26 +175,20 @@ async function onSubmit() {
         parcel_id: parcelId.value,
         status: 'Pending',
         date: new Date().toISOString().slice(0, 10),
-        contract_document_url: '',
+        contract_document_url: contractFileUrl.value,
       })
       recipientId.value = ''
       parcelId.value = ''
-      contractFile.value = []
+      contractFileUrl.value = ''
       loading.value = false
       return
     }
-    // 1. Upload contract file
-    const file = contractFile.value[0]
-    let contractFileUrl = ''
-    if (file) {
-      contractFileUrl = await uploadContractFile(file)
-    }
-    // 2. Insert transfer record
+    // Insert transfer record
     const { error } = await supabase.from('transfers').insert([
       {
         recipient_name: recipientId.value,
         parcel_id: parcelId.value,
-        contract_document_url: contractFileUrl,
+        contract_document_url: contractFileUrl.value,
         status: 'Pending',
       },
     ])
@@ -213,7 +197,7 @@ async function onSubmit() {
     setTimeout(() => (toast.value.show = false), 2000)
     recipientId.value = ''
     parcelId.value = ''
-    contractFile.value = []
+    contractFileUrl.value = ''
     await fetchTransfers()
   } catch (err) {
     toast.value = { show: true, message: 'Submission failed. Please try again.' }
