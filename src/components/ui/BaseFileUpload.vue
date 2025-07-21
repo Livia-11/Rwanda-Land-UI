@@ -12,11 +12,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, defineEmits } from 'vue'
 const props = defineProps<{ accept?: string }>()
+const emit = defineEmits(['change'])
 const fileName = ref('')
 function onFileChange(event: Event) {
   const files = (event.target as HTMLInputElement).files
   fileName.value = files && files.length > 0 ? files[0].name : ''
+  emit('change', event)
 }
 </script> 
