@@ -121,92 +121,85 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import BaseInput from '@/components/ui/BaseInput.vue'
-import BaseSelect from '@/components/ui/BaseSelect.vue'
-import BaseButton from '@/components/ui/BaseButton.vue'
-import BaseCard from '@/components/ui/BaseCard.vue'
-import BaseFileUpload from '@/components/ui/BaseFileUpload.vue'
-import BaseStepper from '@/components/ui/BaseStepper.vue'
-import BaseTable from '@/components/ui/BaseTable.vue'
-import BaseToast from '@/components/ui/BaseToast.vue'
-
+import BaseInput from '../components/ui/BaseInput.vue'
+import BaseSelect from '../components/ui/BaseSelect.vue'
+import BaseButton from '../components/ui/BaseButton.vue'
+import BaseCard from '../components/ui/BaseCard.vue'
+import BaseStepper from '../components/ui/BaseStepper.vue'
+import BaseTable from '../components/ui/BaseTable.vue'
+import BaseToast from '../components/ui/BaseToast.vue'
 import { useForm, useField } from 'vee-validate'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '../lib/supabase'
+
+interface Land {
+  id: string
+  parcel_id: string
+  location: string
+}
+interface Application {
+  id: string
+  parcel_id: string
+  size: string
+  location: string
+  ownership_type: string
+  documents: string[]
+  status: string
+  created_at?: string
+  date?: string
+}
 
 const initialValues = {
   parcel_id: '',
   size: '',
   location: '',
   ownership_type: '',
-  documents: [''], // Array of URLs, at least one
+  documents: [''],
 }
 
 const { handleSubmit, resetForm } = useForm({
   initialValues,
   validationSchema: {
-    parcel_id: value => typeof value === 'string' && value.trim() !== '' || 'Parcel ID is required',
-    size: value => {
+    parcel_id: (value: string) => typeof value === 'string' && value.trim() !== '' || 'Parcel ID is required',
+    size: (value: string) => {
       const num = Number(value)
       return (!isNaN(num) && num > 0) || 'Land size is required'
     },
-    location: value => typeof value === 'string' && value.trim() !== '' || 'Location is required',
-    ownership_type: value => typeof value === 'string' && value.trim() !== '' || 'Ownership type is required',
-    documents: value => Array.isArray(value) && value.length > 0 && value.every(url => /^(https?:\/\/)[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!$&'()*+,;=.]+$/.test(url)) || 'At least one valid document URL is required',
+    location: (value: string) => typeof value === 'string' && value.trim() !== '' || 'Location is required',
+    ownership_type: (value: string) => typeof value === 'string' && value.trim() !== '' || 'Ownership type is required',
+    documents: (value: string[]) => Array.isArray(value) && value.length > 0 && value.every(url => /^(https?:\/\/)[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!$&'()*+,;=.]+$/.test(url)) || 'At least one valid document URL is required',
   },
 })
 
-const { value: parcelId, errorMessage: parcelIdError } = useField('parcel_id')
-const { value: size, errorMessage: sizeError } = useField('size')
-const { value: location, errorMessage: locationError } = useField('location')
-const { value: ownershipType, errorMessage: ownershipTypeError } = useField('ownership_type')
-const { value: documents, errorMessage: documentsError } = useField('documents')
+const { value: parcelId, errorMessage: parcelIdError } = useField<string>('parcel_id')
+const { value: size, errorMessage: sizeError } = useField<string>('size')
+const { value: location, errorMessage: locationError } = useField<string>('location')
+const { value: ownershipType, errorMessage: ownershipTypeError } = useField<string>('ownership_type')
+const { value: documents, errorMessage: documentsError } = useField<string[]>('documents')
 
 const loading = ref(false)
 const toast = ref({ show: false, message: '' })
-const backendAvailable = true // Set to true to use Supabase backend
-const applications = ref([])
+const backendAvailable = true
+const applications = ref<Application[]>([])
 
-function showToast(message) {
+function showToast(message: string) {
   toast.value = { show: true, message }
   setTimeout(() => {
     toast.value.show = false
   }, 2000)
 }
 
-function handleProofFileChange(files) {
-  if (files && files.length > 0) {
-    setProofFile(Array.from(files))
-  } else {
-    setProofFile([])
-  }
-}
-
-function showBackendWarning() {
-  showToast('Backend is not connected. Data will not be saved to the server.')
-}
-
-async function uploadProofFile(file) {
-  const fileExt = file.name.split('.').pop()
-  const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`
-  const { data, error } = await supabase.storage.from('proofs').upload(fileName, file)
-  if (error) throw error
-  // Get public URL
-  const { data: publicUrlData } = supabase.storage.from('proofs').getPublicUrl(fileName)
-  return publicUrlData.publicUrl
-}
-
 async function fetchApplications() {
   loading.value = true
   try {
-    const user = supabase.auth.getUser ? (await supabase.auth.getUser()).data.user : null
-    if (!user) throw new Error('User not authenticated')
+    const { data: userData } = await supabase.auth.getUser()
+    if (!userData?.user) throw new Error('User not authenticated')
     const { data, error } = await supabase
       .from('lands')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userData.user.id)
       .order('created_at', { ascending: false })
     if (error) throw error
-    applications.value = (data || []).map(app => ({
+    applications.value = ((data as Application[]) || []).map(app => ({
       ...app,
       date: app.created_at ? app.created_at.slice(0, 10) : '',
     }))
@@ -226,28 +219,11 @@ onMounted(() => {
 const onSubmit = handleSubmit(async (values) => {
   loading.value = true
   try {
-    if (!backendAvailable) {
-      showBackendWarning()
-      applications.value.unshift({
-      id: Date.now(),
-      parcel_id: values.parcel_id,
-        size: values.size,
-        location: values.location,
-        ownership_type: values.ownership_type,
-        documents: [...values.documents],
-        status: 'pending',
-      date: new Date().toISOString().slice(0, 10),
-    })
-      resetForm()
-    loading.value = false
-      return
-    }
-    // Insert record into Supabase (lands table)
-    const user = supabase.auth.getUser ? (await supabase.auth.getUser()).data.user : null
-    if (!user) throw new Error('User not authenticated')
+    const { data: userData } = await supabase.auth.getUser()
+    if (!userData?.user) throw new Error('User not authenticated')
     const { error } = await supabase.from('lands').insert([
       {
-        user_id: user.id,
+        user_id: userData.user.id,
         parcel_id: values.parcel_id,
         size: values.size,
         location: values.location,

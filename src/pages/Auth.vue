@@ -30,10 +30,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
-import { supabase } from '@/lib/supabase'
-import BaseCard from '@/components/ui/BaseCard.vue'
-import BaseButton from '@/components/ui/BaseButton.vue'
-import BaseInput from '@/components/ui/BaseInput.vue'
+import { supabase } from '../lib/supabase'
+import BaseCard from '../components/ui/BaseCard.vue'
+import BaseButton from '../components/ui/BaseButton.vue'
+import BaseInput from '../components/ui/BaseInput.vue'
 
 const mode = ref<'login' | 'signup'>('login')
 const email = ref('')
@@ -70,7 +70,6 @@ async function onSubmit() {
         return
       }
       success.value = 'Signup successful! Please check your email to confirm your account.'
-      // Optionally, redirect after a delay
       setTimeout(() => router.push('/my-land'), 1500)
     } else {
       const { error: signInError } = await supabase.auth.signInWithPassword({
