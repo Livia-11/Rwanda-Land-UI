@@ -2,8 +2,9 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from './lib/supabase'
+import type { User } from '@supabase/supabase-js'
 
-const user = ref(null)
+const user = ref<User | null>(null)
 const router = useRouter()
 
 async function fetchUser() {
@@ -34,6 +35,7 @@ onMounted(() => {
         <span class="font-extrabold text-white text-2xl tracking-tight drop-shadow">Land Management</span>
         <router-link to="/my-land" class="text-white/90 hover:text-white font-medium transition">Register Land</router-link>
         <router-link to="/transfers" class="text-white/90 hover:text-white font-medium transition">Transfer Land</router-link>
+        <router-link to="/map" class="text-white/90 hover:text-white font-medium transition">Rwanda Map</router-link>
       </div>
       <div class="flex items-center gap-4">
         <span class="text-white/80 text-sm">{{ user.email }}</span>

@@ -22,6 +22,11 @@ const routes: RouteRecordRaw[] = [
     name: 'Auth',
     component: () => import('../pages/Auth.vue'), // Placeholder, to be created
   },
+  {
+    path: '/map',
+    name: 'Map',
+    component: () => import('../pages/Map.vue'),
+  },
 ]
 
 const router = createRouter({
