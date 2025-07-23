@@ -1,4 +1,4 @@
-<template>
+<template> 
   <div class="map-container">
     <div ref="mapContainer" class="ol-map"></div>
     <div class="info-panel">
@@ -21,20 +21,65 @@ import Point from 'ol/geom/Point'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import { Style, Icon } from 'ol/style'
+import { supabase } from '../lib/supabase'
+
+// Types for Supabase landpoints
+interface LandPoint {
+  id: number
+  latitude: number
+  longitude: number
+  [key: string]: any
+}
 
 const mapContainer = ref<HTMLDivElement | null>(null)
 const map = ref<Map | null>(null)
 const clickedCoord = ref<string | null>(null)
 
-// Rwanda's approximate center
+// Rwanda center
 const rwandaCenter = fromLonLat([29.9189, -1.9403])
 
+const fetchLandPoints = async (mapInstance: Map) => {
+  const { data, error } = await supabase.from('land_points').select('*')
+  if (error) {
+    console.error('Error fetching points:', error)
+    return
+  }
+
+  const features = (data as LandPoint[]).map((point) => {
+    const feature = new Feature({
+      geometry: new Point(fromLonLat([point.longitude, point.latitude]))
+    })
+
+    feature.setStyle(
+      new Style({
+        image: new Icon({
+          src: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+          scale: 0.05
+        })
+      })
+    )
+
+    return feature
+  })
+
+  const layer = new VectorLayer({
+    source: new VectorSource({
+      features
+    })
+  })
+
+  mapInstance.addLayer(layer)
+}
+
 onMounted(() => {
-  // Create the map
-  map.value = new Map({
-    target: mapContainer.value as HTMLElement,
+  if (!mapContainer.value) return
+
+  const mapInstance = new Map({
+    target: mapContainer.value,
     layers: [
-      new TileLayer({ source: new OSM() })
+      new TileLayer({
+        source: new OSM()
+      })
     ],
     view: new View({
       center: rwandaCenter,
@@ -45,26 +90,31 @@ onMounted(() => {
     controls: defaultControls()
   })
 
-  // Add a marker at the center of Rwanda
+  map.value = mapInstance
+
   const marker = new Feature({ geometry: new Point(rwandaCenter) })
-  marker.setStyle(new Style({
-    image: new Icon({
-      src: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-      scale: 0.05
+  marker.setStyle(
+    new Style({
+      image: new Icon({
+        src: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+        scale: 0.05
+      })
     })
-  }))
-  const vectorLayer = new VectorLayer({
+  )
+
+  const markerLayer = new VectorLayer({
     source: new VectorSource({ features: [marker] })
   })
-  map.value.addLayer(vectorLayer)
 
-  // Handle map click
-  map.value.on('click', (evt) => {
+  mapInstance.addLayer(markerLayer)
+
+  mapInstance.on('click', (evt) => {
     const coord = evt.coordinate
     const lonLat = toLonLat(coord)
     clickedCoord.value = `Lon: ${lonLat[0].toFixed(5)}, Lat: ${lonLat[1].toFixed(5)}`
-    // Placeholder: Here you can add business logic for land selection, etc.
   })
+
+  fetchLandPoints(mapInstance)
 })
 
 onBeforeUnmount(() => {
@@ -85,14 +135,14 @@ onBeforeUnmount(() => {
   width: 90vw;
   height: 60vh;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 1rem;
 }
 .info-panel {
   background: #f8fafc;
   padding: 1rem 2rem;
   border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   font-size: 1.1rem;
 }
-</style> 
+</style>
