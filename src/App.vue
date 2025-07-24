@@ -38,6 +38,7 @@ onMounted(() => {
         <router-link to="/my-land" class="text-white/90 hover:text-white font-medium transition">{{ t('nav.register_land') }}</router-link>
         <router-link to="/transfers" class="text-white/90 hover:text-white font-medium transition">{{ t('nav.transfer_land') }}</router-link>
         <router-link to="/map" class="text-white/90 hover:text-white font-medium transition">{{ t('nav.rwanda_map') }}</router-link>
+        <router-link to="/land-leases" class="text-white/90 hover:text-white font-medium transition">Land Leases</router-link>
       </div>
       <div class="flex items-center gap-4">
         <span class="text-white/80 text-sm">{{ user.email }}</span>

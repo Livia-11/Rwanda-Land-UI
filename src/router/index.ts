@@ -27,6 +27,16 @@ const routes: RouteRecordRaw[] = [
     name: 'Map',
     component: () => import('../pages/Map.vue'),
   },
+  {
+    path: '/add-lease',
+    name: 'AddLease',
+    component: () => import('../pages/AddLease.vue'),
+  },
+  {
+    path: '/land-leases',
+    name: 'LandLeases',
+    component: () => import('../components/QueryExample.vue'),
+  },
 ]
 
 const router = createRouter({

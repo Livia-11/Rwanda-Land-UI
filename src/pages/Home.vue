@@ -19,6 +19,11 @@
             <BaseButton class="w-full bg-green-600 hover:bg-green-700 py-3 text-lg shadow-md transition-all duration-200 hover:scale-105">Transfer Land</BaseButton>
           </RouterLink>
         </div>
+        <div class="mt-4 w-full max-w-md">
+          <RouterLink to="/land-leases">
+            <BaseButton class="w-full bg-emerald-600 hover:bg-emerald-700 py-3 text-lg shadow-md transition-all duration-200 hover:scale-105">View Land Leases</BaseButton>
+          </RouterLink>
+        </div>
         <div class="mt-6 w-full max-w-md">
           <RouterLink to="/auth">
             <BaseButton class="w-full bg-gray-700 hover:bg-gray-800 py-2 shadow-sm transition-all duration-200 hover:scale-105">Login / Signup</BaseButton>
