@@ -130,6 +130,8 @@ import BaseTable from '../components/ui/BaseTable.vue'
 import BaseToast from '../components/ui/BaseToast.vue'
 import { useForm, useField } from 'vee-validate'
 import { supabase } from '../lib/supabase'
+import { useLandPlotStore } from '../stores/landPlot'
+import { onMounted as vueOnMounted } from 'vue'
 
 interface Land {
   id: string
@@ -181,6 +183,16 @@ const toast = ref({ show: false, message: '' })
 const backendAvailable = true
 const applications = ref<Application[]>([])
 
+const landPlotStore = useLandPlotStore()
+
+// Pre-fill Parcel ID and geometry if coming from map
+vueOnMounted(() => {
+  if (landPlotStore.id) {
+    parcelId.value = landPlotStore.id
+    // Optionally, you can show a message or highlight the field
+  }
+})
+
 function showToast(message: string) {
   toast.value = { show: true, message }
   setTimeout(() => {
@@ -216,21 +228,26 @@ onMounted(() => {
   }
 })
 
+// Add geometry to the submission if present
 const onSubmit = handleSubmit(async (values) => {
   loading.value = true
   try {
     const { data: userData } = await supabase.auth.getUser()
     if (!userData?.user) throw new Error('User not authenticated')
-    const { error } = await supabase.from('lands').insert([
-      {
-        user_id: userData.user.id,
-        parcel_id: values.parcel_id,
-        size: values.size,
-        location: values.location,
-        ownership_type: values.ownership_type,
-        documents: values.documents,
-      },
-    ])
+    const submission: any = {
+      user_id: userData.user.id,
+      parcel_id: values.parcel_id,
+      size: values.size,
+      location: values.location,
+      ownership_type: values.ownership_type,
+      documents: values.documents,
+    }
+    if (landPlotStore.id && landPlotStore.geometry) {
+      submission.plot_id = landPlotStore.id
+      submission.geometry = landPlotStore.geometry
+      landPlotStore.clearPlot()
+    }
+    const { error } = await supabase.from('lands').insert([submission])
     if (error) throw error
     showToast('Application submitted successfully!')
     resetForm()
